@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BB-8 Buddy Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body class="theme-modern">
+  <div class="dash-layout">
+    <!-- Header -->
+    <header class="dash-header">
+      <div class="brand-row">
+        <div class="brand-avatar">
+          <img src="shared/bb8.svg" alt="BB-8" class="brand-droid">
+        </div>
+        <div class="brand-info">
+          <div class="brand-title-wrap">
+            <h1 class="brand-title">BB-8 Buddy</h1>
+            <span class="brand-version">v1.0</span>
+          </div>
+          <div class="status-pill" id="statusBadge">
+            <span class="status-dot"></span>
+            <span class="status-text">Monitoring Active</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-primary" id="checkinNowBtn" title="Trigger a check-in right now">
+          <span class="btn-icon">⚡</span>
+          <span>Check-In</span>
+        </button>
+        <div class="btn-group">
+          <button class="btn btn-secondary" id="exportMdBtn" title="Export Markdown summary">
+            <span class="btn-icon">📝</span>
+            <span>Markdown</span>
+          </button>
+          <button class="btn btn-secondary" id="exportCsvBtn" title="Export CSV spreadsheet">
+            <span class="btn-icon">📊</span>
+            <span>CSV</span>
+          </button>
+        </div>
+        <button class="btn btn-ghost btn-icon-only" id="refreshBtn" title="Refresh dashboard data">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Key Metrics Cards -->
+    <section class="stats-overview">
+      <div class="stat-card">
+        <div class="stat-icon-wrap icon-streak">🔥</div>
+        <div class="stat-details">
+          <span class="stat-value" id="streakVal">0</span>
+          <span class="stat-label">Day Streak</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon-wrap icon-time">⏱️</div>
+        <div class="stat-details">
+          <span class="stat-value" id="trackedTimeVal">0.0h</span>
+          <span class="stat-label">Tracked Focus</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon-wrap icon-logs">📋</div>
+        <div class="stat-details">
+          <span class="stat-value" id="checkinCountVal">0</span>
+          <span class="stat-label">Check-Ins Logged</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon-wrap icon-category">🏷️</div>
+        <div class="stat-details">
+          <span class="stat-value" id="topTagVal">None</span>
+          <span class="stat-label">Top Category</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="timeline">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+        <span>Timeline Feed</span>
+      </button>
+      <button class="nav-tab" data-tab="analytics">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        <span>Analytics &amp; Insights</span>
+      </button>
+      <button class="nav-tab" data-tab="settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <!-- Tab 1: Timeline -->
+    <main class="tab-pane active" id="pane-timeline">
+      <!-- Quick Activity Logger Bar -->
+      <div class="quick-log-card" id="quickLogCard">
+        <div class="quick-log-input-row">
+          <span class="quick-log-icon">💬</span>
+          <input
+            type="text"
+            id="dashQuickLogInput"
+            class="quick-log-input"
+            placeholder="Log what you're working on right now... (press Enter to commit)"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <div class="quick-tag-pills" id="quickTagPills">
+            <button type="button" class="quick-tag-pill active" data-tag="#work">#work</button>
+            <button type="button" class="quick-tag-pill" data-tag="#meeting">#meeting</button>
+            <button type="button" class="quick-tag-pill" data-tag="#focus">#focus</button>
+          </div>
+          <button type="button" class="btn btn-primary btn-log" id="dashQuickLogBtn" title="Log this activity (Enter)">
+            <span>+ Log Activity</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="filter-toolbar">
+        <div class="period-filter" id="periodFilter">
+          <button class="filter-chip active" data-period="today">Today</button>
+          <button class="filter-chip" data-period="week">This Week</button>
+          <button class="filter-chip" data-period="month">This Month</button>
+          <button class="filter-chip" data-period="all">All Time</button>
+        </div>
+
+        <div class="search-box">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            type="text"
+            id="timelineSearchInput"
+            class="search-input"
+            placeholder="Search activities or tags..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+      </div>
+
+      <div class="tag-filter-row" id="tagFilterRow">
+        <span class="tag-filter-label">Filter:</span>
+        <div class="tag-filter-chips" id="tagFilterChips"></div>
+      </div>
+
+      <div class="timeline-container">
+        <div class="timeline-feed" id="timelineFeed"></div>
+        <div class="empty-state" id="timelineEmptyState" style="display: none;">
+          <div class="empty-icon-wrap">🤖</div>
+          <h3>No Check-Ins Logged Yet</h3>
+          <p>Click "Check-In" above or click the BB-8 desktop companion in the corner of your screen to log your active focus.</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- Tab 2: Analytics -->
+    <main class="tab-pane" id="pane-analytics">
+      <div class="analytics-grid">
+        <div class="analytics-card">
+          <div class="card-header">
+            <div class="card-title-icon">🏷️</div>
+            <h2 class="card-title">Time Spent by Category</h2>
+          </div>
+          <div class="tag-distribution-list" id="tagDistList"></div>
+        </div>
+
+        <div class="analytics-card">
+          <div class="card-header">
+            <div class="card-title-icon">🔥</div>
+            <h2 class="card-title">Most Frequent Activities</h2>
+          </div>
+          <div class="common-activities-list" id="commonActivitiesList"></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Tab 3: Settings -->
+    <main class="tab-pane" id="pane-settings">
+      <div class="settings-scroll-wrap">
+        <div class="settings-card">
+          <div class="settings-section">
+            <h3 class="section-title">Check-In Schedule &amp; Inactivity</h3>
+            
+            <div class="setting-row">
+              <div class="setting-info">
+                <label for="intervalSelect" class="setting-title">Check-In Cadence</label>
+                <p class="setting-desc">How often BB-8 asks what you're currently working on.</p>
+              </div>
+              <div class="setting-control">
+                <select id="intervalSelect" class="form-select">
+                  <option value="15">Every 15 minutes</option>
+                  <option value="30">Every 30 minutes (Default)</option>
+                  <option value="45">Every 45 minutes</option>
+                  <option value="60">Every 60 minutes</option>
+                  <option value="custom">Custom interval...</option>
+                </select>
+                <input type="number" id="customIntervalInput" class="form-input custom-interval-input" min="1" max="480" placeholder="Mins" style="display: none;">
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <label for="idleThresholdSelect" class="setting-title">Smart Pause (Idle Detection)</label>
+                <p class="setting-desc">Automatically pause check-ins when stepping away from keyboard.</p>
+              </div>
+              <div class="setting-control">
+                <select id="idleThresholdSelect" class="form-select">
+                  <option value="5">Pause after 5 mins idle</option>
+                  <option value="10">Pause after 10 mins idle (Default)</option>
+                  <option value="15">Pause after 15 mins idle</option>
+                  <option value="30">Pause after 30 mins idle</option>
+                  <option value="0">Disabled (Always check in)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3 class="section-title">BB-8 Companion &amp; Appearance</h3>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-title">Desktop Presence</span>
+                <p class="setting-desc">Corner 3D desktop companion or quiet system tray icon.</p>
+              </div>
+              <div class="setting-control">
+                <select id="presenceModeSelect" class="form-select">
+                  <option value="floating">Corner 3D Companion (Visible)</option>
+                  <option value="tray">Quiet Tray Icon Only</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-title">BB-8 Character Size</span>
+                <p class="setting-desc">Adjust the 3D desktop companion figure scale.</p>
+              </div>
+              <div class="setting-control">
+                <select id="characterSizeSelect" class="form-select">
+                  <option value="compact">Compact (70%)</option>
+                  <option value="small">Small (80% - Recommended)</option>
+                  <option value="medium">Standard (95%)</option>
+                  <option value="large">Large (110%)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3 class="section-title">Audio &amp; Notifications</h3>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-title">BB-8 Droid Chirps</span>
+                <p class="setting-desc">Authentic procedural astromech chirps synthesized via Web Audio.</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="soundToggleCheckbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-title">Desktop Notifications</span>
+                <p class="setting-desc">Send system notifications when check-ins are due.</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="notificationsToggleCheckbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-footer">
+            <span class="save-status-msg" id="saveStatusMsg"></span>
+            <button class="btn btn-primary" id="saveSettingsBtn">
+              <span>Save Preferences</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

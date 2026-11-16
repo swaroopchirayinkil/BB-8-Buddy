@@ -1,0 +1,9 @@
+bb8-buddy (1.0.0-1) stable; urgency=medium
+
+  * Initial production release of BB-8 Buddy.
+  * Timed check-ins, local SQLite storage, smart idle detection.
+  * Native WebKit2 floating window & dashboard.
+  * System tray integration with Ayatana AppIndicator.
+
+ -- Google DeepMind <noreply@google.com>  Sun, 15 Nov 2026 06:00:00 +0000
+

@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BB-8 3D Desktop Assistant Character</title>
+    <!-- Tailwind CSS for crisp, modern HUD overlay styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; user-select: none; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f17;
+            transition: background-color 0.35s ease;
+        }
+        /* Checkerboard pattern shown when Transparent Overlay mode is toggled on */
+        body.transparent-mode {
+            background-color: #1e2430;
+            background-image:
+                linear-gradient(45deg, #272f3d 25%, transparent 25%),
+                linear-gradient(-45deg, #272f3d 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #272f3d 75%),
+                linear-gradient(-45deg, transparent 75%, #272f3d 75%);
+            background-size: 28px 28px;
+            background-position: 0 0, 0 14px, 14px -14px, -14px 0;
+        }
+        #canvas-container {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+        }
+        .mood-btn.active {
+            background: linear-gradient(135deg, #ff6b00, #ea580c);
+            color: #ffffff;
+            border-color: #fdba74;
+            box-shadow: 0 0 18px rgba(255, 107, 0, 0.5);
+        }
+        .kbd-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            padding: 1px 5px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+    <!-- Import Map for Three.js ES Modules & OrbitControls -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <!-- Fullscreen 3D Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Top-Left Desktop Character Status & Title Badge -->
+    <div id="hud-top-left" class="fixed top-4 left-4 z-10 flex flex-col gap-2 pointer-events-none max-w-xs sm:max-w-sm transition-opacity duration-300">
+        <div class="glass-panel rounded-2xl px-4 py-3 text-slate-100 pointer-events-auto">
+            <div class="flex items-center gap-2.5">
+                <span class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-orange-500"></span>
+                </span>
+                <h1 class="text-sm sm:text-base font-bold tracking-tight">BB-8 Astromech Unit</h1>
+                <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30">Three.js</span>
+            </div>
+            <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+                Click BB-8 to interact, move your cursor to guide its photoreceptor eye, or drag to orbit.
+            </p>
+        </div>
+    </div>
+
+    <!-- Top-Right Utility Controls (Transparent Backdrop, Sound, Dock Pad) -->
+    <div id="hud-top-right" class="fixed top-4 right-4 z-10 flex flex-wrap justify-end gap-2 transition-opacity duration-300">
+        <button id="btn-sound" title="Toggle Droid Audio (Web Audio API)"
+            class="glass-panel hover:bg-slate-800/90 text-slate-100 text-xs font-medium px-3.5 py-2.5 rounded-xl flex items-center gap-2 transition cursor-pointer">
+            <span id="sound-icon">🔊</span>
+            <span id="sound-label" class="hidden sm:inline">Audio On</span>
+        </button>
+
+        <button id="btn-dock" title="Toggle Holographic Docking Pad"
+            class="glass-panel hover:bg-slate-800/90 text-slate-100 text-xs font-medium px-3.5 py-2.5 rounded-xl flex items-center gap-2 transition cursor-pointer">
+            <span>🛸</span>
+            <span class="hidden sm:inline">Dock Pad</span>
+        </button>
+
+        <button id="btn-transparent" title="Preview Transparent Alpha Background for Desktop Overlay"
+            class="glass-panel hover:bg-slate-800/90 text-slate-100 text-xs font-medium px-3.5 py-2.5 rounded-xl flex items-center gap-2 transition cursor-pointer">
+            <span>🏁</span>
+            <span>Alpha BG</span>
+        </button>
+    </div>
+
+    <!-- Bottom Interactive Character State / Mood Dock -->
+    <div id="hud-bottom" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-10 w-[95%] max-w-2xl transition-opacity duration-300">
+        <div class="glass-panel rounded-2xl p-2 sm:p-2.5 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+            <button data-mood="idle" class="mood-btn active px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 border border-white/10 hover:bg-white/10 transition flex items-center gap-1.5 cursor-pointer">
+                <span>🤖 Idle</span>
+                <span class="kbd-badge hidden sm:inline">1</span>
+            </button>
+            <button data-mood="happy" class="mood-btn px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 border border-white/10 hover:bg-white/10 transition flex items-center gap-1.5 cursor-pointer">
+                <span>⚡ Excited</span>
+                <span class="kbd-badge hidden sm:inline">2</span>
+            </button>
+            <button data-mood="patrol" class="mood-btn px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 border border-white/10 hover:bg-white/10 transition flex items-center gap-1.5 cursor-pointer">
+                <span>🛞 Patrol Roll</span>
+                <span class="kbd-badge hidden sm:inline">3</span>
+            </button>
+            <button data-mood="curious" class="mood-btn px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 border border-white/10 hover:bg-white/10 transition flex items-center gap-1.5 cursor-pointer">
+                <span>🧐 Curious</span>
+                <span class="kbd-badge hidden sm:inline">4</span>
+            </button>
+            <button data-mood="hologram" class="mood-btn px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 border border-white/10 hover:bg-white/10 transition flex items-center gap-1.5 cursor-pointer">
+                <span>📡 Hologram</span>
+                <span class="kbd-badge hidden sm:inline">5</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Modular Three.js Application -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        /**
+         * ============================================================================
+         * 1. PROCEDURAL DROID SOUND SYNTHESIZER (Web Audio API - Zero External Assets)
+         * ============================================================================
+         */
+        class DroidAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            ensureContext() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playChirp(type = 'idle') {
+                if (!this.enabled) return;
+                try {
+                    this.ensureContext();
+                    const now = this.ctx.currentTime;
+
+                    const patterns = {
+                        idle: [
+                            { f1: 780, f2: 1120, dur: 0.08, delay: 0 },
+                            { f1: 1180, f2: 920, dur: 0.09, delay: 0.10 }
+                        ],
+                        happy: [
+                            { f1: 680, f2: 1450, dur: 0.07, delay: 0 },
+                            { f1: 1200, f2: 1950, dur: 0.08, delay: 0.08 },
+                            { f1: 1500, f2: 2300, dur: 0.11, delay: 0.17 },
+                            { f1: 1850, f2: 1350, dur: 0.09, delay: 0.30 }
+                        ],
+                        curious: [
+                            { f1: 540, f2: 960, dur: 0.16, delay: 0 },
+                            { f1: 880, f2: 1380, dur: 0.18, delay: 0.20 }
+                        ],
+                        patrol: [
+                            { f1: 420, f2: 880, dur: 0.06, delay: 0 },
+                            { f1: 720, f2: 1150, dur: 0.07, delay: 0.08 },
+                            { f1: 950, f2: 640, dur: 0.07, delay: 0.17 }
+                        ],
+                        hologram: [
+                            { f1: 320, f2: 980, dur: 0.22, delay: 0 },
+                            { f1: 980, f2: 1420, dur: 0.25, delay: 0.22 }
+                        ]
+                    };
+
+                    const notes = patterns[type] || patterns.idle;
+                    notes.forEach((n) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+
+                        const start = now + n.delay;
+                        const end = start + n.dur;
+
+                        osc.frequency.setValueAtTime(n.f1, start);
+                        osc.frequency.exponentialRampToValueAtTime(Math.max(80, n.f2), end);
+
+                        gain.gain.setValueAtTime(0.001, start);
+                        gain.gain.linearRampToValueAtTime(0.11, start + 0.015);
+                        gain.gain.exponentialRampToValueAtTime(0.001, end);
+
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+
+                        osc.start(start);
+                        osc.stop(end + 0.01);
+                    });
+                } catch (e) {
+                    // Ignore audio errors before user gesture
+                }
+            }
+        }
+
+        /**
+         * ============================================================================
+         * 2. HIGH-DETAIL PROCEDURAL TEXTURES FOR BB-8 BODY & DOME HEAD
+         * ============================================================================
+         * Vibrant tangerine-orange (#FF6B00 / #FF7700) medallions, warm off-white hull
+         * (#F4F1EA), and teal-blue dome stripes (#1C7C9C).
+         */
+        function createBB8BodyTexture() {
+            const width = 2048;
+            const height = 1024;
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            // Base warm off-white ceramic hull color (#F4F1EA)
+            ctx.fillStyle = '#f4f1ea';
+            ctx.fillRect(0, 0, width, height);
+
+            // Subtle panel seam lines connecting the 6 medallions
+            ctx.strokeStyle = '#8b8a84';
+            ctx.lineWidth = 4;
+
+            // Equatorial seam line
+            ctx.beginPath();
+            ctx.moveTo(0, height * 0.5);
+            ctx.lineTo(width, height * 0.5);
+            ctx.stroke();
+
+            // Meridional panel seam lines
+            [0.125, 0.375, 0.625, 0.875].forEach((u) => {
+                ctx.beginPath();
+                ctx.moveTo(width * u, 0);
+                ctx.lineTo(width * u, height);
+                ctx.stroke();
+            });
+
+            // Spherical projection of the 6 iconic tangerine-orange circular medallions
+            const medallionCenters = [
+                new THREE.Vector3(0, 0, 1),   // Front
+                new THREE.Vector3(0, 0, -1),  // Back
+                new THREE.Vector3(1, 0, 0),   // Right
+                new THREE.Vector3(-1, 0, 0),  // Left
+                new THREE.Vector3(0, 1, 0),   // Top
+                new THREE.Vector3(0, -1, 0)   // Bottom
+            ];
+
+            const imgData = ctx.getImageData(0, 0, width, height);
+            const data = imgData.data;
+            const maxAngle = 0.56; // Angular radius of each medallion on the sphere
+
+            for (let py = 0; py < height; py++) {
+                const v = 1 - py / height;
+                const theta = (1 - v) * Math.PI;
+                const sinTheta = Math.sin(theta);
+                const cosTheta = Math.cos(theta);
+
+                for (let px = 0; px < width; px++) {
+                    const u = px / width;
+                    const phi = u * Math.PI * 2;
+
+                    const sx = -sinTheta * Math.cos(phi);
+                    const sy = cosTheta;
+                    const sz = sinTheta * Math.sin(phi);
+
+                    for (let m = 0; m < medallionCenters.length; m++) {
+                        const c = medallionCenters[m];
+                        const dot = Math.max(-1, Math.min(1, sx * c.x + sy * c.y + sz * c.z));
+                        const angDist = Math.acos(dot);
+
+                        if (angDist <= maxAngle) {
+                            const rNorm = angDist / maxAngle;
+
+                            // Local tangent coordinates for spokes & notches
+                            let tx = 0, ty = 0;
+                            if (Math.abs(c.y) > 0.9) {
+                                tx = sx;
+                                ty = sz * c.y;
+                            } else {
+                                tx = -sx * c.z + sz * c.x;
+                                ty = sy;
+                            }
+                            const localAngle = Math.atan2(ty, tx);
+
+                            let color = null;
+
+                            // Deep burnt-orange beveled outer border (#D94E00)
+                            if (rNorm > 0.96 && rNorm <= 1.0) {
+                                color = [217, 78, 0];
+                            }
+                            // Main signature vivid tangerine orange ring (#FF6B00 with #FF8C1A highlight band)
+                            else if (rNorm > 0.66 && rNorm <= 0.96) {
+                                if (rNorm > 0.89) {
+                                    color = [255, 140, 26]; // Warm #FF8C1A outer highlight rim
+                                } else {
+                                    color = [255, 107, 0];  // Rich saturated #FF6B00 tangerine orange
+                                }
+
+                                // Dark mechanical notch ticks on the orange ring
+                                const sector = ((localAngle % (Math.PI / 2)) + Math.PI / 2) % (Math.PI / 2);
+                                if (rNorm > 0.87 && sector > 0.35 && sector < 0.42) {
+                                    color = [217, 78, 0];
+                                }
+                            }
+                            // Inner beveled border of orange ring (#D94E00)
+                            else if (rNorm > 0.625 && rNorm <= 0.66) {
+                                color = [217, 78, 0];
+                            }
+                            // Inner mechanical assembly zone
+                            else if (rNorm <= 0.625) {
+                                const spokeAngle = ((localAngle + Math.PI / 4) % (Math.PI / 2) + (Math.PI / 2)) % (Math.PI / 2) - Math.PI / 4;
+                                const isSpoke = Math.abs(spokeAngle) < 0.23 && rNorm > 0.34;
+                                const isTBarCap = Math.abs(spokeAngle) < 0.34 && rNorm > 0.34 && rNorm < 0.41;
+
+                                if (isSpoke || isTBarCap) {
+                                    color = [255, 119, 0]; // Vivid #FF7700 inner tabs
+                                } else if (rNorm < 0.22) {
+                                    color = [110, 114, 120]; // Central slate-grey core hub
+                                } else if (rNorm >= 0.22 && rNorm < 0.255) {
+                                    color = [68, 71, 77];
+                                } else {
+                                    const plateSeg = Math.floor(((localAngle + Math.PI) / (Math.PI * 2)) * 8);
+                                    if (plateSeg % 2 === 0 && rNorm > 0.32 && rNorm < 0.58) {
+                                        color = [122, 120, 114]; // Warm medium mechanical grey plate
+                                    } else {
+                                        color = [238, 234, 225]; // Recessed warm off-white panel
+                                    }
+                                }
+                            }
+
+                            if (color) {
+                                const idx = (py * width + px) * 4;
+                                data[idx] = color[0];
+                                data[idx + 1] = color[1];
+                                data[idx + 2] = color[2];
+                                data[idx + 3] = 255;
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+
+            // Add hull rivets and panel latches between medallions
+            const rivetCoords = [
+                [0.125, 0.32], [0.125, 0.68],
+                [0.375, 0.32], [0.375, 0.68],
+                [0.625, 0.32], [0.625, 0.68],
+                [0.875, 0.32], [0.875, 0.68],
+                [0.25, 0.24], [0.50, 0.24], [0.75, 0.24], [0.0, 0.24],
+                [0.25, 0.76], [0.50, 0.76], [0.75, 0.76], [0.0, 0.76]
+            ];
+
+            rivetCoords.forEach(([u, v]) => {
+                const cx = u * width;
+                const cy = v * height;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 13, 0, Math.PI * 2);
+                ctx.fillStyle = '#9c988e';
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#6c6961';
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#75726a';
+                ctx.fill();
+            });
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.anisotropy = 8;
+            return texture;
+        }
+
+        function createBB8HeadTexture() {
+            const width = 1024;
+            const height = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            // Base warm off-white ceramic dome hull (#F4F1EA)
+            ctx.fillStyle = '#f4f1ea';
+            ctx.fillRect(0, 0, width, height);
+
+            // Top crown cap in crisp teal-blue (#1C7C9C) matching reference image
+            ctx.fillStyle = '#1c7c9c';
+            ctx.fillRect(0, 0, width, height * 0.15);
+
+            // Subtle darker teal border under crown cap
+            ctx.fillStyle = '#145a73';
+            ctx.fillRect(0, height * 0.15, width, 6);
+
+            // Upper vivid tangerine-orange horizontal accent stripe (#FF6B00)
+            ctx.fillStyle = '#ff6b00';
+            ctx.fillRect(0, height * 0.23, width, 30);
+            ctx.strokeStyle = '#d94e00';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(0, height * 0.23, width, 30);
+
+            // Clear warm off-white surround where the front photoreceptor sits (around u = 0.25)
+            ctx.fillStyle = '#f4f1ea';
+            ctx.fillRect(width * 0.15, height * 0.20, width * 0.20, height * 0.54);
+
+            // Lower vivid orange rectangular detail blocks around the rim (#FF7700)
+            const blockPositions = [0.03, 0.085, 0.41, 0.47, 0.61, 0.77, 0.90];
+            blockPositions.forEach((u) => {
+                ctx.fillStyle = '#ff7700';
+                ctx.fillRect(width * u, height * 0.67, 38, 26);
+                ctx.strokeStyle = '#d94e00';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(width * u, height * 0.67, 38, 26);
+            });
+
+            // Lower signature teal-blue band (#1C7C9C) above the neck collar
+            ctx.fillStyle = '#1c7c9c';
+            ctx.fillRect(0, height * 0.81, width, height * 0.085);
+
+            // Warm stone-grey lower rim trim
+            ctx.fillStyle = '#c4bfb4';
+            ctx.fillRect(0, height * 0.895, width, height * 0.105);
+
+            // Small circular sensor dot under primary lens
+            ctx.beginPath();
+            ctx.arc(width * 0.25, height * 0.72, 14, 0, Math.PI * 2);
+            ctx.fillStyle = '#b8b3a8';
+            ctx.fill();
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.anisotropy = 8;
+            return texture;
+        }
+
+        /**
+         * ============================================================================
+         * 3. SCENE GLOBALS & BB-8 CHARACTER HIERARCHY
+         * ============================================================================
+         */
+        const BODY_RADIUS = 1.25;
+        const HEAD_RADIUS = 0.74;
+
+        let scene, camera, renderer, controls;
+        let ambientLight, keyLight, rimLight, fillLight;
+        let studioFloor, studioGrid, dockPadGroup, holoBeamMesh;
+        let bb8Root, bodySphere, headPivotGroup, headTiltGroup, headSpinGroup;
+        let primaryEyeRing, holoLensLight;
+
+        const audioEngine = new DroidAudioEngine();
+        let currentMood = 'idle';
+        let isTransparent = false;
+        let showDockPad = true;
+        let hudVisible = true;
+
+        // Cursor / programmatic look target (-1 to 1)
+        const targetLook = { x: 0, y: 0 };
+        const smoothLook = { x: 0, y: 0 };
+
+        // Patrol rolling kinematics state
+        let patrolAngle = 0;
+        let excitedBounceTime = 0;
+
+        function buildBB8Character() {
+            bb8Root = new THREE.Group();
+            scene.add(bb8Root);
+
+            // --- A. ROLLING SPHERICAL BODY ---
+            const bodyGeo = new THREE.SphereGeometry(BODY_RADIUS, 64, 48);
+            const bodyTex = createBB8BodyTexture();
+            const bodyMat = new THREE.MeshStandardMaterial({
+                map: bodyTex,
+                roughness: 0.32,
+                metalness: 0.08
+            });
+            bodySphere = new THREE.Mesh(bodyGeo, bodyMat);
+            bodySphere.position.y = BODY_RADIUS;
+            bodySphere.castShadow = true;
+            bodySphere.receiveShadow = true;
+            bb8Root.add(bodySphere);
+
+            // --- B. STABILIZED DOME HEAD HIERARCHY ---
+            headPivotGroup = new THREE.Group();
+            headPivotGroup.position.y = BODY_RADIUS;
+            bb8Root.add(headPivotGroup);
+
+            headTiltGroup = new THREE.Group();
+            headPivotGroup.add(headTiltGroup);
+
+            headSpinGroup = new THREE.Group();
+            headSpinGroup.position.y = BODY_RADIUS - 0.02;
+            headTiltGroup.add(headSpinGroup);
+
+            // 1. Beveled Lower Neck Collar
+            const collarGeo = new THREE.CylinderGeometry(HEAD_RADIUS * 0.99, HEAD_RADIUS * 0.83, 0.16, 48);
+            const collarMat = new THREE.MeshStandardMaterial({
+                color: 0xc2bdb2,
+                roughness: 0.38,
+                metalness: 0.25
+            });
+            const collarMesh = new THREE.Mesh(collarGeo, collarMat);
+            collarMesh.position.y = 0.08;
+            collarMesh.castShadow = true;
+            headSpinGroup.add(collarMesh);
+
+            // Dark mechanical neck ring gasket
+            const gasketGeo = new THREE.CylinderGeometry(HEAD_RADIUS * 0.82, HEAD_RADIUS * 0.76, 0.05, 48);
+            const gasketMat = new THREE.MeshStandardMaterial({
+                color: 0x262930,
+                roughness: 0.6,
+                metalness: 0.45
+            });
+            const gasketMesh = new THREE.Mesh(gasketGeo, gasketMat);
+            gasketMesh.position.y = 0.01;
+            headSpinGroup.add(gasketMesh);
+
+            // Micro orange neck roller bearings around the magnetic neck ring
+            const bearingGeo = new THREE.SphereGeometry(0.026, 12, 12);
+            const bearingMat = new THREE.MeshStandardMaterial({
+                color: 0xff7700,
+                roughness: 0.25,
+                metalness: 0.75
+            });
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const bearing = new THREE.Mesh(bearingGeo, bearingMat);
+                bearing.position.set(
+                    Math.cos(angle) * (HEAD_RADIUS * 0.79),
+                    0.005,
+                    Math.sin(angle) * (HEAD_RADIUS * 0.79)
+                );
+                headSpinGroup.add(bearing);
+            }
+
+            // 2. Hemispherical Dome Head
+            const domeGeo = new THREE.SphereGeometry(HEAD_RADIUS, 48, 32, 0, Math.PI * 2, 0, Math.PI * 0.5);
+            const domeTex = createBB8HeadTexture();
+            const domeMat = new THREE.MeshStandardMaterial({
+                map: domeTex,
+                roughness: 0.28,
+                metalness: 0.10
+            });
+            const domeMesh = new THREE.Mesh(domeGeo, domeMat);
+            domeMesh.position.y = 0.14;
+            domeMesh.castShadow = true;
+            domeMesh.receiveShadow = true;
+            headSpinGroup.add(domeMesh);
+
+            // 3. Primary Photoreceptor Eye (Front +Z)
+            const eyeHousingGroup = new THREE.Group();
+            eyeHousingGroup.position.set(0, 0.14 + HEAD_RADIUS * 0.45, HEAD_RADIUS * 0.88);
+            eyeHousingGroup.rotation.x = -0.38;
+            headSpinGroup.add(eyeHousingGroup);
+
+            const bezelGeo = new THREE.CylinderGeometry(0.18, 0.20, 0.08, 32);
+            bezelGeo.rotateX(Math.PI / 2);
+            const bezelMat = new THREE.MeshStandardMaterial({
+                color: 0x262930,
+                roughness: 0.3,
+                metalness: 0.7
+            });
+            const bezelMesh = new THREE.Mesh(bezelGeo, bezelMat);
+            eyeHousingGroup.add(bezelMesh);
+
+            // Glowing orange accent ring around main photoreceptor
+            const eyeRingGeo = new THREE.TorusGeometry(0.165, 0.014, 16, 32);
+            const eyeRingMat = new THREE.MeshStandardMaterial({
+                color: 0xff6b00,
+                emissive: 0xff5500,
+                emissiveIntensity: 0.45,
+                roughness: 0.25
+            });
+            primaryEyeRing = new THREE.Mesh(eyeRingGeo, eyeRingMat);
+            primaryEyeRing.position.z = 0.036;
+            eyeHousingGroup.add(primaryEyeRing);
+
+            // Glossy dark photoreceptor lens
+            const lensGeo = new THREE.SphereGeometry(0.145, 24, 24);
+            const lensMat = new THREE.MeshPhysicalMaterial({
+                color: 0x090d16,
+                roughness: 0.06,
+                metalness: 0.1,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.05
+            });
+            const lensMesh = new THREE.Mesh(lensGeo, lensMat);
+            lensMesh.scale.set(1, 1, 0.48);
+            lensMesh.position.z = 0.025;
+            eyeHousingGroup.add(lensMesh);
+
+            // Crisp specular catchlight dot on main eye
+            const glintGeo = new THREE.SphereGeometry(0.026, 12, 12);
+            const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const glintMesh = new THREE.Mesh(glintGeo, glintMat);
+            glintMesh.position.set(-0.048, 0.048, 0.088);
+            eyeHousingGroup.add(glintMesh);
+
+            // 4. Secondary Holoprojector Eye (Front-Right)
+            const holoGroup = new THREE.Group();
+            holoGroup.position.set(0.28, 0.14 + HEAD_RADIUS * 0.34, HEAD_RADIUS * 0.85);
+            holoGroup.rotation.set(-0.28, 0.34, 0);
+            headSpinGroup.add(holoGroup);
+
+            const holoRimGeo = new THREE.CylinderGeometry(0.082, 0.09, 0.06, 24);
+            holoRimGeo.rotateX(Math.PI / 2);
+            const holoRimMesh = new THREE.Mesh(holoRimGeo, bezelMat);
+            holoGroup.add(holoRimMesh);
+
+            const holoLensGeo = new THREE.SphereGeometry(0.064, 18, 18);
+            const holoLensMat = new THREE.MeshStandardMaterial({
+                color: 0x1e293b,
+                emissive: 0x38bdf8,
+                emissiveIntensity: 0.25,
+                roughness: 0.15
+            });
+            const holoLensMesh = new THREE.Mesh(holoLensGeo, holoLensMat);
+            holoLensMesh.scale.set(1, 1, 0.5);
+            holoLensMesh.position.z = 0.022;
+            holoGroup.add(holoLensMesh);
+
+            holoLensLight = new THREE.PointLight(0x38bdf8, 0, 4.5);
+            holoLensLight.position.set(0, 0, 0.18);
+            holoGroup.add(holoLensLight);
+
+            // Volumetric hologram projection cone (visible in 'hologram' state)
+            const beamGeo = new THREE.ConeGeometry(0.75, 2.2, 32, 1, true);
+            beamGeo.translate(0, -1.1, 0);
+            beamGeo.rotateX(-Math.PI / 2);
+            const beamMat = new THREE.MeshBasicMaterial({
+                color: 0x38bdf8,
+                transparent: true,
+                opacity: 0.0,
+                side: THREE.DoubleSide,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            holoBeamMesh = new THREE.Mesh(beamGeo, beamMat);
+            holoBeamMesh.position.z = 0.05;
+            holoGroup.add(holoBeamMesh);
+
+            // 5. Dual Whip Antennas on Top of Dome
+            const antBaseMat = new THREE.MeshStandardMaterial({
+                color: 0xd6d1c7,
+                roughness: 0.35,
+                metalness: 0.6
+            });
+            const antTipMat = new THREE.MeshStandardMaterial({
+                color: 0xff6b00,
+                emissive: 0xff5500,
+                emissiveIntensity: 0.35
+            });
+
+            // Tall primary antenna
+            const tallAntGeo = new THREE.CylinderGeometry(0.011, 0.018, 0.44, 12);
+            const tallAnt = new THREE.Mesh(tallAntGeo, antBaseMat);
+            tallAnt.position.set(-0.08, 0.14 + HEAD_RADIUS + 0.18, -0.06);
+            headSpinGroup.add(tallAnt);
+
+            const tallTip = new THREE.Mesh(new THREE.SphereGeometry(0.016, 10, 10), antTipMat);
+            tallTip.position.set(-0.08, 0.14 + HEAD_RADIUS + 0.40, -0.06);
+            headSpinGroup.add(tallTip);
+
+            // Short secondary antenna
+            const shortAntGeo = new THREE.CylinderGeometry(0.009, 0.014, 0.26, 12);
+            const shortAnt = new THREE.Mesh(shortAntGeo, antBaseMat);
+            shortAnt.position.set(-0.17, 0.14 + HEAD_RADIUS + 0.10, -0.02);
+            headSpinGroup.add(shortAnt);
+        }
+
+        function initScene() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 2.35, 5.4);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.08;
+            container.appendChild(renderer.domElement);
+
+            // OrbitControls for interactive camera inspection
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.06;
+            controls.target.set(0, 1.45, 0);
+            controls.minDistance = 2.6;
+            controls.maxDistance = 11.0;
+            controls.maxPolarAngle = Math.PI * 0.49;
+
+            // Three-point studio lighting with warm orange bounce & key boost
+            ambientLight = new THREE.HemisphereLight(0xfff5eb, 0x3b2618, 0.85);
+            scene.add(ambientLight);
+
+            keyLight = new THREE.DirectionalLight(0xfff1e0, 1.28);
+            keyLight.position.set(4.5, 7.5, 5.5);
+            keyLight.castShadow = true;
+            keyLight.shadow.mapSize.width = 1024;
+            keyLight.shadow.mapSize.height = 1024;
+            keyLight.shadow.camera.near = 1;
+            keyLight.shadow.camera.far = 20;
+            const d = 4.5;
+            keyLight.shadow.camera.left = -d;
+            keyLight.shadow.camera.right = d;
+            keyLight.shadow.camera.top = d;
+            keyLight.shadow.camera.bottom = -d;
+            keyLight.shadow.bias = -0.0005;
+            scene.add(keyLight);
+
+            // Vivid tangerine-orange rim light to make orange panels & silhouette pop
+            rimLight = new THREE.DirectionalLight(0xff6b00, 0.9);
+            rimLight.position.set(-4.5, 3.8, -4.2);
+            scene.add(rimLight);
+
+            // Warm amber fill light
+            fillLight = new THREE.DirectionalLight(0xffb366, 0.45);
+            fillLight.position.set(-4, 2.2, 4.2);
+            scene.add(fillLight);
+
+            // Sleek dark studio floor + subtle radial grid (hidden in transparent widget mode)
+            const floorGeo = new THREE.CircleGeometry(14, 64);
+            floorGeo.rotateX(-Math.PI / 2);
+            const floorMat = new THREE.MeshStandardMaterial({
+                color: 0x0f172a,
+                roughness: 0.78,
+                metalness: 0.15
+            });
+            studioFloor = new THREE.Mesh(floorGeo, floorMat);
+            studioFloor.receiveShadow = true;
+            scene.add(studioFloor);
+
+            studioGrid = new THREE.PolarGridHelper(6.5, 16, 6, 64, 0xff6b00, 0x1e293b);
+            studioGrid.position.y = 0.003;
+            studioGrid.material.opacity = 0.25;
+            studioGrid.material.transparent = true;
+            scene.add(studioGrid);
+
+            // Holographic Orange Docking Pad beneath BB-8
+            dockPadGroup = new THREE.Group();
+            scene.add(dockPadGroup);
+
+            const padOuterGeo = new THREE.RingGeometry(1.45, 1.54, 64);
+            padOuterGeo.rotateX(-Math.PI / 2);
+            const padOuterMat = new THREE.MeshBasicMaterial({
+                color: 0xff6b00,
+                transparent: true,
+                opacity: 0.65,
+                side: THREE.DoubleSide
+            });
+            const padOuter = new THREE.Mesh(padOuterGeo, padOuterMat);
+            padOuter.position.y = 0.008;
+            dockPadGroup.add(padOuter);
+
+            const padInnerGeo = new THREE.RingGeometry(0.95, 0.99, 64);
+            padInnerGeo.rotateX(-Math.PI / 2);
+            const padInnerMat = new THREE.MeshBasicMaterial({
+                color: 0x38bdf8,
+                transparent: true,
+                opacity: 0.45,
+                side: THREE.DoubleSide
+            });
+            const padInner = new THREE.Mesh(padInnerGeo, padInnerMat);
+            padInner.position.y = 0.008;
+            dockPadGroup.add(padInner);
+
+            buildBB8Character();
+            setupInteractions();
+        }
+
+        /**
+         * ============================================================================
+         * 4. INTERACTION HANDLERS & DESKTOP CHARACTER BRIDGE API
+         * ============================================================================
+         */
+        function setCharacterMood(mood) {
+            currentMood = mood;
+            if (mood === 'happy') {
+                excitedBounceTime = 1.6;
+            }
+            audioEngine.playChirp(mood);
+
+            // Update active button styling
+            document.querySelectorAll('.mood-btn').forEach((btn) => {
+                btn.classList.toggle('active', btn.dataset.mood === mood);
+            });
+        }
+
+        function setTransparentBackground(enabled) {
+            isTransparent = Boolean(enabled);
+            document.body.classList.toggle('transparent-mode', isTransparent);
+            if (studioFloor) studioFloor.visible = !isTransparent;
+            if (studioGrid) studioGrid.visible = !isTransparent;
+        }
+
+        function setHudVisible(visible) {
+            hudVisible = Boolean(visible);
+            const opacity = hudVisible ? '1' : '0';
+            const pointerEvents = hudVisible ? 'auto' : 'none';
+            ['hud-top-left', 'hud-top-right', 'hud-bottom'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.opacity = opacity;
+                    el.style.pointerEvents = pointerEvents;
+                }
+            });
+        }
+
+        function setupInteractions() {
+            // Pointer tracking so BB-8's head follows cursor or touch
+            window.addEventListener('pointermove', (e) => {
+                targetLook.x = (e.clientX / window.innerWidth) * 2 - 1;
+                targetLook.y = -((e.clientY / window.innerHeight) * 2 - 1);
+            });
+
+            // Raycast click on BB-8 to trigger happy chirp & excited bounce
+            const raycaster = new THREE.Raycaster();
+            const pointer = new THREE.Vector2();
+            let downPos = { x: 0, y: 0 };
+
+            renderer.domElement.addEventListener('pointerdown', (e) => {
+                downPos = { x: e.clientX, y: e.clientY };
+            });
+
+            renderer.domElement.addEventListener('pointerup', (e) => {
+                const dist = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y);
+                if (dist > 6) return; // Ignore orbit drags
+
+                pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+                pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(pointer, camera);
+
+                const hits = raycaster.intersectObjects(bb8Root.children, true);
+                if (hits.length > 0) {
+                    excitedBounceTime = 1.4;
+                    audioEngine.playChirp('happy');
+                }
+            });
+
+            // Mood dock buttons
+            document.querySelectorAll('.mood-btn').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    setCharacterMood(btn.dataset.mood);
+                });
+            });
+
+            // Keyboard shortcuts 1-5
+            window.addEventListener('keydown', (e) => {
+                const map = { '1': 'idle', '2': 'happy', '3': 'patrol', '4': 'curious', '5': 'hologram' };
+                if (map[e.key]) {
+                    setCharacterMood(map[e.key]);
+                }
+            });
+
+            // Audio toggle button
+            const btnSound = document.getElementById('btn-sound');
+            btnSound.addEventListener('click', () => {
+                audioEngine.enabled = !audioEngine.enabled;
+                document.getElementById('sound-icon').textContent = audioEngine.enabled ? '🔊' : '🔇';
+                document.getElementById('sound-label').textContent = audioEngine.enabled ? 'Audio On' : 'Muted';
+                if (audioEngine.enabled) audioEngine.playChirp('idle');
+            });
+
+            // Dock pad toggle
+            document.getElementById('btn-dock').addEventListener('click', () => {
+                showDockPad = !showDockPad;
+                dockPadGroup.visible = showDockPad;
+            });
+
+            // Transparent alpha background toggle
+            document.getElementById('btn-transparent').addEventListener('click', () => {
+                setTransparentBackground(!isTransparent);
+            });
+
+            // Responsive resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // Expose clean global API for txiki.js / TinyJS WebView host integration
+            window.BB8Character = {
+                setState: (state) => setCharacterMood(state),
+                setTransparentBackground: (flag) => setTransparentBackground(flag),
+                setHudVisible: (flag) => setHudVisible(flag),
+                lookAt: (nx, ny) => {
+                    targetLook.x = Math.max(-1, Math.min(1, nx));
+                    targetLook.y = Math.max(-1, Math.min(1, ny));
+                },
+                triggerBeepBoop: (type = 'happy') => {
+                    excitedBounceTime = 1.2;
+                    audioEngine.playChirp(type);
+                }
+            };
+        }
+
+        /**
+         * ============================================================================
+         * 5. MAIN ANIMATION & KINEMATICS LOOP
+         * ============================================================================
+         */
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const dt = Math.min(clock.getDelta(), 0.05);
+            const elapsed = clock.getElapsedTime();
+
+            // Smooth pointer look interpolation
+            smoothLook.x += (targetLook.x - smoothLook.x) * 6 * dt;
+            smoothLook.y += (targetLook.y - smoothLook.y) * 6 * dt;
+
+            // Default target head angles & position
+            let targetPosX = 0;
+            let targetPosZ = 0;
+            let targetPosY = 0;
+            let headYaw = smoothLook.x * 0.65;
+            let headPitch = -smoothLook.y * 0.25;
+            let headRoll = -smoothLook.x * 0.14;
+            let holoIntensity = 0;
+
+            if (currentMood === 'idle') {
+                // Gentle gyroscopic breathing sway
+                headPitch += Math.sin(elapsed * 2.1) * 0.04;
+                headRoll += Math.cos(elapsed * 1.5) * 0.035;
+                bodySphere.rotation.z = Math.sin(elapsed * 1.4) * 0.03;
+            } else if (currentMood === 'happy') {
+                // Joyful hop & rapid head wiggle
+                targetPosY = Math.abs(Math.sin(elapsed * 7.5)) * 0.24;
+                headYaw += Math.sin(elapsed * 11) * 0.28;
+                headRoll += Math.cos(elapsed * 9) * 0.16;
+                bodySphere.rotation.y += dt * 2.4;
+            } else if (currentMood === 'patrol') {
+                // True rolling wheel kinematics along a circular patrol path
+                const orbitRadius = 1.15;
+                const angularSpeed = 1.25;
+                patrolAngle += angularSpeed * dt;
+
+                const nextX = Math.cos(patrolAngle) * orbitRadius;
+                const nextZ = Math.sin(patrolAngle) * orbitRadius;
+
+                const dx = nextX - bb8Root.position.x;
+                const dz = nextZ - bb8Root.position.z;
+                const stepDist = Math.hypot(dx, dz);
+
+                bb8Root.position.x = nextX;
+                bb8Root.position.z = nextZ;
+
+                if (stepDist > 0.0001) {
+                    // Roll the sphere around the axis perpendicular to travel direction
+                    const moveDir = new THREE.Vector3(dx, 0, dz).normalize();
+                    const rollAxis = new THREE.Vector3(moveDir.z, 0, -moveDir.x).normalize();
+                    bodySphere.rotateOnWorldAxis(rollAxis, stepDist / BODY_RADIUS);
+
+                    // Face head forward into the turn with slight banking tilt
+                    const heading = Math.atan2(dx, dz);
+                    headYaw = heading + Math.sin(elapsed * 4) * 0.18;
+                    headPitch = 0.14;
+                    headRoll = -0.14;
+                }
+            } else if (currentMood === 'curious') {
+                // Expressive inquisitive head cocking & double-take
+                headRoll = Math.sin(elapsed * 2.4) * 0.34;
+                headPitch = -0.14 + Math.cos(elapsed * 3.0) * 0.08;
+                headYaw += Math.sin(elapsed * 1.7) * 0.35;
+            } else if (currentMood === 'hologram') {
+                // Project glowing cyan hologram beam from secondary eye
+                holoIntensity = 1.0;
+                headPitch = -0.12;
+                headYaw = Math.sin(elapsed * 1.2) * 0.15;
+            }
+
+            // Temporary excited click reaction bounce
+            if (excitedBounceTime > 0) {
+                excitedBounceTime = Math.max(0, excitedBounceTime - dt);
+                targetPosY += Math.abs(Math.sin(excitedBounceTime * 14)) * 0.22 * (excitedBounceTime / 1.4);
+                headYaw += Math.sin(excitedBounceTime * 22) * 0.25;
+            }
+
+            // Smoothly return root position to center when not patrolling
+            if (currentMood !== 'patrol') {
+                bb8Root.position.x += (targetPosX - bb8Root.position.x) * 5 * dt;
+                bb8Root.position.z += (targetPosZ - bb8Root.position.z) * 5 * dt;
+            }
+            bb8Root.position.y += (targetPosY - bb8Root.position.y) * 12 * dt;
+
+            // Smoothly interpolate dome head orientation
+            headSpinGroup.rotation.y += (headYaw - headSpinGroup.rotation.y) * 8 * dt;
+            headTiltGroup.rotation.x += (headPitch - headTiltGroup.rotation.x) * 8 * dt;
+            headTiltGroup.rotation.z += (headRoll - headTiltGroup.rotation.z) * 8 * dt;
+
+            // Update hologram beam & lens glow
+            if (holoBeamMesh && holoLensLight) {
+                const targetOpacity = holoIntensity > 0 ? 0.22 + Math.sin(elapsed * 18) * 0.04 : 0;
+                holoBeamMesh.material.opacity += (targetOpacity - holoBeamMesh.material.opacity) * 8 * dt;
+                holoLensLight.intensity += (holoIntensity * 2.4 - holoLensLight.intensity) * 8 * dt;
+            }
+
+            // Subtle rotation on holographic dock pad
+            if (dockPadGroup && dockPadGroup.visible) {
+                dockPadGroup.rotation.y += dt * 0.35;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Start scene & animation loop once window loads
+        window.addEventListener('load', () => {
+            initScene();
+            animate();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+Source: bb8-buddy
+Section: utils
+Priority: optional
+Maintainer: Google DeepMind <noreply@google.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+Homepage: https://github.com/google/bb8-buddy
+
+Package: bb8-buddy
+Architecture: all
+Depends: ${misc:Depends},
+         python3 (>= 3.8),
+         python3-gi,
+         python3-cairo,
+         gir1.2-gtk-3.0,
+         gir1.2-webkit2-4.1,
+         gir1.2-ayatanaappindicator3-0.1 | gir1.2-appindicator3-0.1,
+         gir1.2-notify-0.7
+Recommends: alsa-utils,
+            libnotify-bin,
+            xprintidle,
+            sqlite3
+Description: Lightweight, friendly, local-first Linux desktop companion
+ BB-8 Buddy is a tiny, persistent, always-available desktop companion
+ that gently checks in every 30 minutes with the user.
+ Features:
+  * Timed check-ins with customizable intervals (15, 30, 45, 60m)
+  * Voice or text input with local storage
+  * Smart pause when system is idle
+  * Beautiful timeline dashboard with analytics and daily streaks
+  * Native system tray integration and desktop notifications
+  * Markdown and CSV export
+  * 100% private, local-only, zero cloud dependencies
+

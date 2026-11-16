@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BB-8 Buddy</title>
+  <link rel="stylesheet" href="checkin.css">
+</head>
+<body class="theme-pleasant">
+  <div class="companion-layout" id="companionLayout">
+    <!-- 1. Question Speech Bubble -->
+    <div class="speech-bubble" id="speechBubble">
+      <div class="bubble-header">
+        <div class="bubble-title-row">
+          <span class="bubble-pulse-dot"></span>
+          <span class="bubble-terminal-tag">BB-8 Assistant</span>
+        </div>
+        <button class="bubble-close-btn" id="bubbleCloseBtn" title="Dismiss">✕</button>
+      </div>
+
+      <div class="terminal-query-line">
+        <span class="prompt-arrow">💬</span>
+        <span class="bubble-question" id="bubbleQuestion">What are you working on right now?</span>
+      </div>
+
+      <!-- Quick Action Chips -->
+      <div class="bubble-chips-row">
+        <button class="action-chip same-chip" id="bubbleSameBtn" title="Repeat last activity">
+          ⚡ <span id="bubbleSameLabel">Same</span>
+        </button>
+        <button class="action-chip break-chip" id="bubbleBreakBtn" title="Taking a break">
+          ☕ Break
+        </button>
+        <button class="action-chip tag-chip" data-tag="#work">#work</button>
+        <button class="action-chip tag-chip" data-tag="#meeting">#meeting</button>
+      </div>
+
+      <!-- Input Line -->
+      <div class="bubble-input-row">
+        <input
+          type="text"
+          id="bubbleInput"
+          class="bubble-text-input"
+          placeholder="Enter current activity..."
+          maxlength="200"
+          autocomplete="off"
+        />
+        <button class="bubble-icon-btn" id="bubbleMicBtn" title="Speak (converts voice into text)">
+          <span id="bubbleMicIcon">🎙️</span>
+        </button>
+        <button class="bubble-send-btn" id="bubbleSendBtn" title="Send (Enter)">
+          ↵
+        </button>
+      </div>
+
+      <div class="bubble-mic-status" id="bubbleMicStatus"></div>
+
+      <!-- Triangular Bubble Pointer -->
+      <div class="bubble-pointer"></div>
+    </div>
+
+    <!-- 2. 3D Three.js BB-8 Droid Canvas -->
+    <div class="droid-area" id="droidArea">
+      <div class="canvas-wrap" id="canvasWrap" title="Click BB-8 to check in!">
+        <canvas id="bb8Canvas" width="240" height="170"></canvas>
+      </div>
+
+      <!-- Animation Mood Selector Dropdown -->
+      <div class="anim-control-bar" id="animControlBar">
+        <select id="animSelect" class="anim-select" title="BB-8 Animation Mood">
+          <option value="idle">🤖 Idle</option>
+          <option value="happy">⚡ Excited</option>
+          <option value="patrol">🛞 Patrol Roll</option>
+          <option value="curious">🧐 Curious</option>
+          <option value="hologram">📡 Hologram</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 3. Mini Dock -->
+    <div class="mini-dock" id="miniDock">
+      <button class="dock-btn" id="dockDashBtn" title="Open Dashboard">📊</button>
+      <button class="dock-btn" id="dockSoundBtn" title="Toggle Sound">🔊</button>
+      <button class="dock-btn" id="dockHideBtn" title="Minimize">✕</button>
+    </div>
+  </div>
+
+  <script src="shared/three.min.js"></script>
+  <script src="shared/bb8_audio.js"></script>
+  <script src="shared/bb8_3d.js"></script>
+  <script src="checkin.js"></script>
+</body>
+</html>

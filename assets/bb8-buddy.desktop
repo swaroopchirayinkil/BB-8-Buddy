@@ -1,0 +1,22 @@
+[Desktop Entry]
+Name=BB-8 Buddy
+GenericName=Desktop Activity Companion
+Comment=A lightweight, friendly, local-first Linux desktop companion that gently checks in
+Exec=bb8-buddy
+Icon=bb8-buddy
+Terminal=false
+Type=Application
+Categories=Utility;Clock;Office;
+Keywords=companion;focus;tracker;productivity;bb8;starwars;
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
+Actions=CheckIn;Dashboard;
+
+[Desktop Action CheckIn]
+Name=Check In Now
+Exec=bb8-buddy --checkin
+
+[Desktop Action Dashboard]
+Name=Open Dashboard
+Exec=bb8-buddy --dashboard
+

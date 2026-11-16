@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+"""
+BB-8 Buddy launcher script.
+"""
+
+import argparse
+import os
+import sys
+from pathlib import Path
+
+# Add project root to sys.path
+root_dir = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(root_dir))
+
+from bb8_buddy import __app_name__, __version__
+from bb8_buddy.app import BB8App
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="bb8-buddy",
+        description="BB-8 Buddy: Lightweight, gentle, local-first Linux desktop companion.",
+    )
+    parser.add_argument(
+        "--checkin",
+        action="store_true",
+        help="Open the check-in window immediately",
+    )
+    parser.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="Open the dashboard window",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"{__app_name__} v{__version__}",
+    )
+    args = parser.parse_args()
+
+    action = None
+    if args.checkin:
+        action = "checkin"
+    elif args.dashboard:
+        action = "dashboard"
+
+    app = BB8App(root_dir=root_dir)
+    sys.exit(app.start(initial_action=action))
+
+
+if __name__ == "__main__":
+    main()
+
