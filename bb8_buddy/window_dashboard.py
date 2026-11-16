@@ -9,7 +9,11 @@ import os
 import sys
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+
+if TYPE_CHECKING:
+    from bb8_buddy.config import Config
+    from bb8_buddy.db import Database
 
 import gi
 gi.require_version("Gtk", "3.0")
@@ -21,8 +25,8 @@ class DashboardWindow:
     def __init__(
         self,
         ui_dir: Path,
-        db: Any,
-        config: Any,
+        db: Database,
+        config: Config,
         on_trigger_checkin: Callable[[], None],
         on_settings_changed: Optional[Callable[[], None]] = None,
     ):

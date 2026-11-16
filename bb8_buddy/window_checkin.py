@@ -11,7 +11,12 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+
+if TYPE_CHECKING:
+    from bb8_buddy.audio import AudioManager
+    from bb8_buddy.config import Config
+    from bb8_buddy.db import Database
 
 import cairo
 import gi
@@ -27,9 +32,9 @@ class CheckInWindow:
         ui_dir: Path,
         on_save_entry: Callable[[Dict[str, Any]], None],
         on_open_dashboard: Callable[[], None],
-        audio_manager: Any,
-        db: Any,
-        config: Any,
+        audio_manager: AudioManager,
+        db: Database,
+        config: Config,
     ):
         self.ui_dir = ui_dir
         self.html_path = ui_dir / "checkin.html"
