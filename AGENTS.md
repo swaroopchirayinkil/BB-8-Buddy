@@ -71,3 +71,4 @@ A task is only complete when:
 - Relevant tests / type checks / linters pass
 - No unnecessary new abstractions or dependencies were introduced
 - The change is easy for a future AI agent (or human) to understand and extend
+
